@@ -1,4 +1,4 @@
-# Popup Window 
+# Frames and Windows 
 
 Popup windows are used rarely, as there are alternatives: loading and displaying information in-page, or in iframe. 
 If we’re going to open a popup, a good practice is to inform the user about it. An “opening window” icon near a link or button would allow the visitor to survive the focus shift and keep both windows in mind. 
@@ -11,4 +11,56 @@ To close the popup: use close() call. Also the user may close them (just like an
 Methods focus() and blur() allow to focus/unfocus a window. But they don’t work all the time. 
 Events focus and blur allow to track switching in and out of the window. But please note that a window may still be visible even in the background state, after blur. 
 
- 
+ ## Cross Window Communication
+
+To call methods and access the content of another window, we should first have a reference to it.
+For popups we have these references:
+From the opener window: window.open – opens a new window and returns a reference to it,
+From the popup: window.opener – is a reference to the opener window from a popup.
+For iframes, we can access parent/children windows using:
+window.frames – a collection of nested window objects,
+ -window.parent, window.top are the references to parent and top windows,
+ -iframe.contentWindow is the window inside an <iframe> tag.
+If windows share the same origin (host, port, protocol), then windows can do whatever they want with each other.
+Otherwise, only possible actions are:
+Change the location of another window (write-only access).
+Post a message to it.
+Exceptions are:
+Windows that share the same second-level domain: a.site.com and b.site.com. Then setting document.domain='site.com' in both of them puts them into the “same origin” state.
+If an iframe has a sandbox attribute, it is forcefully put into the “different origin” state, unless the allow-same-origin is specified in the attribute value. That can be used to run untrusted code in iframes from the same site.
+The postMessage interface allows two windows with any origins to talk:
+The sender calls targetWin.postMessage(data, targetOrigin).
+If targetOrigin is not '*', then the browser checks if window targetWin has the origin targetOrigin.
+If it is so, then targetWin triggers the messageevent with special properties:
+origin – the origin of the sender window (like http://my.site.com)
+source – the reference to the sender window.
+data – the data, any object in everywhere except IE that supports only strings.
+We should use addEventListener to set the handler for this event inside the target window
+
+### The Clickjacking Attack
+
+Clickjacking is a way to “trick” users into clicking on a victim site without even knowing what’s happening.
+That’s dangerous if there are important click-activated actions.
+A hacker can post a link to their evil page in a message, or lure visitors to their page by some other means.
+There are many variations.
+From one perspective – the attack is “not deep”: all a hacker is doing is intercepting a single click.
+But from another perspective, if the hacker knows that after the click another control will appear, then they may use cunning messages to coerce the user into clicking on them as well.
+The attack is quite dangerous, because when we engineer the UI we usually don’t anticipate that a hacker may click on behalf of the visitor.
+So vulnerabilities can be found in totally unexpected places.
+It is recommended to use X-Frame-Options: SAMEORIGIN on pages (or whole websites) which are not intended to be viewed inside frames.
+Use a covering <div> if we want to allow our pages to be shown in iframes, but still stay safe.To insert a few words of code, use the <code>tag, for several lines – use <pre>, for more than 10 lines – use a sandbox
+
+#### ArrayBuffer and Binary arrays
+
+ArrayBuffer is the core object, a reference to the fixed-length contiguous memory area.
+To do almost any operation on ArrayBuffer, we need a view.
+It can be a TypedArray:
+Uint8Array, Uint16Array, Uint32Array – for unsigned integers of 8, 16, and 32 bits.
+Uint8ClampedArray – for 8-bit integers, “clamps” them on assignment.
+Int8Array, Int16Array, Int32Array – for signed integer numbers (can be negative).
+Float32Array, Float64Array – for signed floating-point numbers of 32 and 64 bits.
+Or a DataView – the view that uses methods to specify a format, e.g. getUint8(offset).
+In most cases we create and operate directly on typed arrays, leaving ArrayBuffer undercover, as a “common discriminator”. We can access it as .bufferand make another view if needed.
+There are also two additional terms, that are used in descriptions of methods that operate on binary data:
+ArrayBufferView is an umbrella term for all these kinds of views.
+BufferSource is an umbrella term for ArrayBuffer or ArrayBufferView.
